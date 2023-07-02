@@ -1,157 +1,130 @@
-const usuarios = [
-  {
-    id: 1,
-    nome: "Yondaime",
-    email: "yondaime@email.com",
-    senha: 123456,
-    
-  },
-  {
-    id: 2,
-    nome: "Naruto",
-    email: "naruto@email.com",
-    senha: 12345,
-  },
-  {
-    id: 3,
-    nome: "Kakashi",
-    email: "kakashi@email",
-    senha: 1234,
-  },
-  {
-    id: 4,
-    nome: "Jiraya",
-    email: "Jiraya@email",
-    senha: 123,
-  },
-  {
-    id: 5,
-    nome: "Tsunade",
-    email: "tsunade@email",
-    senha: 123456,
-  },
-];
+const usuarioService = require("../service/usuario.service"); // Importa o módulo de serviço de usuário
+const mongoose = require("mongoose"); // Importa o módulo mongoose para interagir com o MongoDB
 
-const listar = (req, res) => {
-  const id = req.params.id;
-  let found = false;
+const listar = async (req, res) => {
+  try {
+    const id = new mongoose.Types.ObjectId(req.params.id); // Converte o ID da solicitação para um ObjectId do mongoose
+    let found = false; // Variável para verificar se o usuário foi encontrado
 
-  usuarios.map(function (valor) {
-    if (valor.id == id) {
-      found = true;
-      return res.send(valor);
+    const usuario = await usuarioService.listarById(id); // Chama o serviço de usuário para listar um usuário pelo ID
+
+    if (usuario != null) {
+      found = true; // Se o usuário for encontrado, define a variável "found" como verdadeira
     }
-  });
 
-  if (!found) {
-    res.status(404).send({ message: "Não foi encontrado" });
+
+    // Retorna uma resposta de erro se o usuário não for encontrado
+    if (!found) {
+      return res
+        .status(404)
+        .send({ message: "Usuario não foi encontrado, tente outro ID!" }); 
+    }
+
+    return res.status(200).send(usuario); // Retorna o usuário encontrado
+
+  } catch (err) {
+    console.log(`erro: ${err}`); // Exibe o erro no console
+    return res.status(500).send("Erro no servidor, tente novamente mais tarde"); // Retorna uma resposta de erro do servidor
   }
 };
 
-
-
-
-const listarTodosUsuarios = (req, res) => {
-  res.send(usuarios);
+const listarTodosUsuarios = async (req, res) => {
+  return res.status(200).send(await usuarioService.listarTodosUsuario()); // Lista todos os usuários existentes
 };
 
-const createUsuarios = (req, res) => {
-  const usuario = req.body;
+const createUsuarios = async (req, res) => {
+  const usuario = req.body; // Obtém os dados do usuário a partir do corpo da solicitação
 
   if (Object.keys(usuario).length === 0) {
-    return res.status(400).send({ message: "Nada encontrado, esta vazio!" });
-  }
-
-  if (!usuario.id) {
-    return res.status(400).send({ message: "O campo id não foi encontrado" });
+    return res.status(400).send({ message: "Nada encontrado, está vazio!" }); // Retorna uma resposta de erro se não houver dados de usuário
   }
 
   if (!usuario.nome) {
-    return res.status(400).send({ message: "O campo nome não foi encontrado" });
+    return res.status(400).send({ message: "O campo nome não foi encontrado" }); // Retorna uma resposta de erro se o campo "nome" estiver ausente
   }
 
   if (!usuario.email) {
     return res
       .status(400)
-      .send({ message: "O campo email não foi encontrado" });
+      .send({ message: "O campo email não foi encontrado" }); // Retorna uma resposta de erro se o campo "email" estiver ausente
   }
 
   if (!usuario.senha) {
     return res
       .status(400)
-      .send({ message: "O campo senha não foi encontrado" });
+      .send({ message: "O campo senha não foi encontrado" }); // Retorna uma resposta de erro se o campo "senha" estiver ausente
   }
 
-  usuario.nacionalidade = "Brasileira";
+  if (!usuario.token) {
+    usuario.token = ""; // Define o valor do token como vazio se não estiver presente
+  }
 
-  usuarios.push(usuario);
-  res.status(201).send(usuarios);
+  try {
+    const novoUsuario = await usuarioService.createUsuario(usuario); // Cria um novo usuário com os dados fornecidos
+    return res.status(201).send(novoUsuario);
+  } catch (error) {
+    console.error(error); // Imprime o erro no console para fins de depuração
+    return res.status(500).send({ message: "Erro ao criar o usuário" });
+  }
 };
 
 
+const updateUsuario = async (req, res) => {
+  const id = req.params.id; // Obtém o ID do usuário a partir dos parâmetros da solicitação
+  const usuario = req.body; // Obtém os dados do usuário a partir do corpo da solicitação
 
-const updateUsuario = (req, res) => {
-  const id = req.params.id;
-  const usuario = req.body;
-  let found = false;
-
+  // Retorna uma resposta de erro se não houver dados de usuário
   if (Object.keys(usuario).length === 0) {
-    return res.status(400).send({ message: "Nada encontrado, esta vazio!"  });
+    return res.status(400).send({ message: "Nada encontrado, está vazio!" }); 
   }
 
-  if (!usuario.id) {
-    return res.status(400).send({ message: "O campo id não foi encontrado" });
-  }
-
+   // Retorna uma resposta de erro se o campo "nome" estiver ausente
   if (!usuario.nome) {
     return res.status(400).send({ message: "O campo nome não foi encontrado" });
   }
 
+  // Retorna uma resposta de erro se o campo "email" estiver ausente
   if (!usuario.email) {
     return res
       .status(400)
-      .send({ message: "O campo email não foi encontrado" });
+      .send({ message: "O campo email não foi encontrado" }); 
   }
 
+  // Retorna uma resposta de erro se o campo "senha" estiver ausente
   if (!usuario.senha) {
     return res
       .status(400)
-      .send({ message: "O campo senha não foi encontrado" });
+      .send({ message: "O campo senha não foi encontrado" }); 
   }
 
-  usuarios.map(function (valor, index) {
-    if (valor.id == id) {
-      found = true;
-      usuarios[index] = usuario;
-      return res.send(usuarios[index]);
-    }
-  });
-
-  if (!found) {
-    res.status(404).send({ message: "Não foi encontrado" });
-  }
-
-
+  // Atualiza o usuário com os dados fornecidos
+  return res.status(200).send(await usuarioService.updateUsuario(id, usuario)); 
 };
 
-const deleteUsuario = (req, res) => {
-  const id = req.params.id;
+const deleteUsuario = async (req, res) => {
+  try {
+    const id = new mongoose.Types.ObjectId(req.params.id); // Converte o ID da solicitação para um ObjectId do mongoose
+    let found = false; // Variável para verificar se o usuário foi encontrado
 
-  let found = false;
+    const usuario = await usuarioService.listarById(id); // Chama o serviço de usuário para listar um usuário pelo ID
 
-  usuarios.map(function (valor, index) {
-    if (valor.id == id) {
-      found = true;
-      usuarios.splice(index, 1);
-      return res.send(valor);
+    if (usuario != null) {
+      found = true; // Se o usuário for encontrado, define a variável "found" como verdadeira
+      return res.status(200).send(await usuarioService.deleteUsuario(id)); // Deleta o usuário encontrado
     }
-  });
 
-  if (!found) {
-    res.status(404).send({ message: "Não foi encontrado" });
+    if (!found) {
+      return res
+        .status(404)
+        .send({ message: "Usuario não foi encontrado, tente outro ID!" }); // Retorna uma resposta de erro se o usuário não for encontrado
+    }
+  } catch (err) {
+    console.log(`erro: ${err}`); // Exibe o erro no console
+    return res.status(500).send("Erro no servidor, tente novamente mais tarde"); // Retorna uma resposta de erro do servidor
   }
 };
 
+// exportando um objeto contendo várias funções 
 module.exports = {
   listar,
   listarTodosUsuarios,
